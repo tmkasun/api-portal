@@ -43,5 +43,6 @@ module.exports = {
         pathToConfigModule: `src/components/utils/typography`,
       },
     },
+    `gatsby-plugin-material-ui`,
   ],
 }
