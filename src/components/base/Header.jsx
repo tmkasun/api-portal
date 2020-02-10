@@ -8,6 +8,7 @@ import Button from "@material-ui/core/Button"
 import { Link, graphql, useStaticQuery } from "gatsby"
 import SearchIcon from "@material-ui/icons/Search"
 import InputBase from "@material-ui/core/InputBase"
+import UserAvatar from "./UserAvatar"
 
 import logo from "../../../static/sample1.png"
 
@@ -78,15 +79,12 @@ export default function Header(props) {
     }
   `)
   const classes = useStyles()
-  const { title } = props
+  const { title, user } = props
   const { description } = data.site.siteMetadata
+
   return (
     <div className={classes.root}>
-      <AppBar
-        className={classes.appbarColor}
-        color="inherit"
-        position="static"
-      >
+      <AppBar className={classes.appbarColor} color="inherit" position="static">
         <Toolbar>
           <Grid
             container
@@ -165,6 +163,19 @@ export default function Header(props) {
                     </Button>
                   </Link>
                 </Grid>
+                {user && (
+                  <Grid item>
+                    <Link activeStyle={{ color: "read" }} to="/myapps">
+                      <Button
+                        className={classes.menuButton}
+                        size="small"
+                        color="secondary"
+                      >
+                        My Apps
+                      </Button>
+                    </Link>
+                  </Grid>
+                )}
                 <Grid item>
                   <div className={classes.search}>
                     <div className={classes.searchIcon}>
@@ -190,14 +201,18 @@ export default function Header(props) {
                 alignItems="center"
               >
                 <Grid item>
-                  <Button
-                    href="/devportal/services/configs"
-                    variant="outlined"
-                    color="primary"
-                    size="small"
-                  >
-                    Login
-                  </Button>
+                  {user ? (
+                    <UserAvatar user={user} />
+                  ) : (
+                    <Button
+                      href="/devportal/services/configs"
+                      variant="outlined"
+                      color="primary"
+                      size="small"
+                    >
+                      Login
+                    </Button>
+                  )}
                 </Grid>
               </Grid>
             </Grid>

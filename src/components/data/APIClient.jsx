@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -16,41 +16,53 @@
  * under the License.
  */
 
+
 import SwaggerClient from 'swagger-client';
 import { Mutex } from 'async-mutex';
-import Configurations from 'Config';
-import AuthManager from 'AppData/AuthManager';
+import queryString from 'query-string';
+import AuthManager from './AuthManager';
 import Utils from './Utils';
+
+
+const Settings = {
+    app: {
+      context: "/devportal",
+    },
+  }
 
 /**
  * This class expose single swaggerClient instance created using the given swagger URL (Publisher, Store, ect ..)
  * it's highly unlikely to change the REST API Swagger definition (swagger.json) file on the fly,
- * Hence this singleton class help to preserve consecutive swagger client object creations saving redundant IO
- * operations.
+ * Hence this singleton class help to preserve consecutive swagger client object creations saving redundant IO operations.
  */
 class APIClient {
     /**
-     * @param {Object} environment - Environment to get host for the swagger-client's spec property.
-     * @param {{}} args - Accept as an optional argument for APIClient constructor.Merge the given args with
-     *  default args.
-     * @returns {APIClient}
+     * @param {String} host : Host of apis. Host for the swagger-client's spec property.
+     * @param {{}} args : Accept as an optional argument for APIClient constructor.Merge the given args with default args.
+     * @returns {APIClient|*|null}
      */
-    constructor(environment, args = {}) {
-        this.environment = environment || Utils.getCurrentEnvironment();
-        SwaggerClient.http.withCredentials = true;
-        const promisedResolve = SwaggerClient.resolve({
-            url: Utils.getSwaggerURL(),
-            requestInterceptor: (request) => {
-                request.headers.Accept = 'text/yaml';
+    constructor(host, args = {}) {
+        this.host = host || window.location.host;
+        this.environment = Utils.getCurrentEnvironment();
+        const authorizations = {
+            OAuth2Security: {
+                token: { access_token: AuthManager.getUser() ? AuthManager.getUser().getPartialToken() : '' },
             },
-        });
+        };
+
+        SwaggerClient.http.withCredentials = true;
+        const promisedResolve = SwaggerClient.resolve({ url: Utils.getSwaggerURL(), requestInterceptor: (request) => { request.headers.Accept = 'text/yaml'; } });
         APIClient.spec = promisedResolve;
         this._client = promisedResolve.then((resolved) => {
-            const argsv = Object.assign(args, {
-                spec: this._fixSpec(resolved.spec),
-                requestInterceptor: this._getRequestInterceptor(),
-                responseInterceptor: this._getResponseInterceptor(),
-            });
+            const argsv = Object.assign(
+                args,
+                {
+                    spec: this._fixSpec(resolved.spec),
+                    authorizations,
+                    requestInterceptor: this._getRequestInterceptor(),
+                    responseInterceptor: this._getResponseInterceptor(),
+                },
+            );
             SwaggerClient.http.withCredentials = true;
             return new SwaggerClient(argsv);
         });
@@ -68,8 +80,8 @@ class APIClient {
 
     /**
      * Get the ETag of a given resource key from the session storage
-     * @param {String} key - key of resource.
-     * @returns {String} ETag value for the given key
+     * @param key {string} key of resource.
+     * @returns {string} ETag value for the given key
      */
     static getETag(key) {
         return sessionStorage.getItem('etag_' + key);
@@ -96,11 +108,7 @@ class APIClient {
             APIClient.spec = SwaggerClient.resolve({ url: Utils.getSwaggerURL() });
         }
         return APIClient.spec.then((resolved) => {
-            return (
-                resolved.spec.paths[resourcePath]
-                && resolved.spec.paths[resourcePath][resourceMethod]
-                && resolved.spec.paths[resourcePath][resourceMethod].security[0].OAuth2Security[0]
-            );
+            return resolved.spec.paths[resourcePath] && resolved.spec.paths[resourcePath][resourceMethod] && resolved.spec.paths[resourcePath][resourceMethod].security[0].OAuth2Security[0];
         });
     }
 
@@ -113,9 +121,9 @@ class APIClient {
      * @private
      */
     _fixSpec(spec) {
-        const updatedSpec = spec;
-        updatedSpec.host = this.environment.host;
-        return updatedSpec;
+        spec.host = this.host;
+        spec.security = [{ OAuth2Security: ['apim:api_subscribe'] }];
+        return spec;
     }
 
     _getResponseInterceptor() {
@@ -127,26 +135,41 @@ class APIClient {
             // If an unauthenticated response is received, we check whether the token is valid by introspecting it.
             // If it is not valid, we need to clear the stored tokens (in cookies etc) in the browser by redirecting the
             //   user to logout.
-            if (data.status === 401 && data.body != null && data.body.description === 'Unauthenticated request') {
+            if (data.status === 401 && data.obj != null && data.obj.description === 'Unauthenticated request') {
                 const userData = AuthManager.getUserFromToken();
-                userData.catch((error) => {
-                    console.error('Error occurred while checking token status. Hence redirecting to login', error);
-                    window.location = Configurations.app.context + Utils.CONST.LOGOUT_CALLBACK;
-                });
+                const existingUser = AuthManager.getUser(this.environment.label);
+                if (existingUser) {
+                    userData.then((user) => {
+                        if (user) {
+                            window.location = Settings.app.context + Utils.CONST.LOGOUT_CALLBACK;
+                        }
+                    }).catch((error) => {
+                        console.error('Error occurred while checking token status. Hence redirecting to login', error);
+                        window.location = Settings.app.context + Utils.CONST.LOGOUT_CALLBACK;
+                    });
+                } else {
+                    console.error('Attempted a call to a protected API without a proper access token');
+                }
             }
             return data;
         };
     }
 
-
     /**
-     *
-     *
-     * @returns
+     * Interceptor for each request
+     * @returns {Object}
      * @memberof APIClient
      */
     _getRequestInterceptor() {
         return (request) => {
+            const { location } = window;
+            if (location) {
+                const { tenant } = queryString.parse(location.search);
+                if (tenant) {
+                    request.headers['X-WSO2-Tenant'] = tenant;
+                }
+            }
+
             const existingUser = AuthManager.getUser(this.environment.label);
             if (!existingUser) {
                 console.log('User not found. Token refreshing failed.');
@@ -166,30 +189,25 @@ class APIClient {
             }
 
             const env = this.environment;
-            const promise = new Promise((resolve, reject) => {
-                this.mutex.acquire().then((release) => {
-                    existingToken = AuthManager.getUser(env.label).getPartialToken();
-                    if (existingToken) {
-                        request.headers.authorization = 'Bearer ' + existingToken;
-                        release();
-                        resolve(request);
-                    } else {
-                        AuthManager.refresh(env).then((res) => res.json())
-                            .then(() => {
-                                request.headers.authorization = 'Bearer '
+            const promise = this.mutex.acquire().then((release) => {
+                existingToken = AuthManager.getUser(env.label).getPartialToken();
+                if (existingToken) {
+                    request.headers.authorization = 'Bearer ' + existingToken;
+                    release();
+                    return request;
+                } else {
+                    return AuthManager.refresh(env).then((res) => res.json())
+                        .then(() => {
+                            request.headers.authorization = 'Bearer '
                                 + AuthManager.getUser(env.label).getPartialToken();
-                                release();
-                                resolve(request);
-                            }).catch((error) => {
-                                console.error('Error:', error);
-                                release();
-                                reject();
-                            })
-                            .finally(() => {
-                                release();
-                            });
-                    }
-                });
+                            return request;
+                        }).catch((error) => {
+                            console.error('Error:', error);
+                        })
+                        .finally(() => {
+                            release();
+                        });
+                }
             });
 
             if (APIClient.getETag(request.url)

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, WSO2 Inc. (http://wso2.com) All Rights Reserved.
+ * Copyright (c) 2017, WSO2 Inc. (http://wso2.com) All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,17 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+"use strict";
 
-const CONSTS = {
-    API: 'API',
-    APIProduct: 'APIProduct',
-    HTTP_METHODS: ['get', 'put', 'post', 'delete', 'patch', 'head', 'options'],
-    errorCodes: {
-        INSUFFICIENT_PREVILEGES: '900403: Insufficient privileges to login',
-        INVALID_TOKEN: '900401: Invalid token',
-        NO_TOKEN_FOUND: '901401: No partial token found!',
-    },
-    TENANT_STATE_ACTIVE: 'ACTIVE',
-};
+import AuthManager from './AuthManager'
 
-export default CONSTS;
+/***
+ * Abstract resource representation, Host for generic resource related methods
+ */
+export default class Resource {
+
+    /**
+     * @param data
+     * @returns {object} Metadata for API request
+     */
+    static _requestMetaData(data = {}) {
+        /* TODO: This should be moved to an interceptor ~tmkb*/
+        return {
+            requestContentType: data['Content-Type'] || "application/json"
+        };
+    }
+}

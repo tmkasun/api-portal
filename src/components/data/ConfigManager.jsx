@@ -16,38 +16,28 @@
  * under the License.
  */
 
-/**
- * Fetch the UI related configurations via the APIs, These configuration can be modified from the configuration files
- * reside in the API Manager server instance
- *
- * @class ConfigManager
- */
+import axios from 'axios';
+const app =  {
+      context: "/devportal",
+    }
+
 class ConfigManager {
+
     /**
      * get promised config and update the configMap
      * @param configPath: Path to read configs from
-     * @returns {Promise}: promised config
+     * @returns {Promise Object}: promised config
      * @private
-     */
-    /* eslint-disable no-underscore-dangle */
-
-    /**
-     *
-     * indicate “private” members of APIClientFactory that is why underscore has used here
-     * @static
-     * @param {String} configPath API path to configurations
-     * @returns {Promise} config promise object
-     * @memberof ConfigManager
      */
     static _getPromisedConfigs(configPath) {
         let promisedConfig = ConfigManager._promisedConfigMap.get(configPath);
         if (promisedConfig) {
             return promisedConfig;
         }
-        const { origin } = window.location;
-        const requestUrl = origin + configPath;
+        let origin = window.location.origin;
+        let requestUrl = origin + configPath;
 
-        promisedConfig = fetch(requestUrl);
+        promisedConfig = axios.get(requestUrl);
         ConfigManager._promisedConfigMap.set(configPath, promisedConfig);
         return promisedConfig;
     }
@@ -58,7 +48,8 @@ class ConfigManager {
      */
     static getConfigs() {
         return {
-            configName: ConfigManager._getPromisedConfigs(ConfigManager.ConfigRequestPaths.CONFIG_KEY),
+            environments: ConfigManager._getPromisedConfigs(ConfigManager.ConfigRequestPaths.ENVIRONMENT_CONFIG_PATH),
+            features: ConfigManager._getPromisedConfigs(ConfigManager.ConfigRequestPaths.FEATURE_LIST_PATH),
         };
     }
 }
@@ -68,12 +59,12 @@ class ConfigManager {
  * @type {Object}
  */
 ConfigManager.ConfigRequestPaths = {
-    CONFIG_KEY: 'PATH_TO_YOUR_CONFIG.JSON',
+    ENVIRONMENT_CONFIG_PATH: app.context + '/site/public/theme/temporary_environments_config.json',
+    FEATURE_LIST_PATH: app.context + '/site/public/theme/temporary_features_config.json',
 };
 
 /**
- * The map of single instance promised configs objects, This act as a configuration cache per page page load.
- * Assumption is , configs would not change between page refreshes.
+ * The map of single instance promised configs objects
  * {key}: ConfigRequestPaths
  * {value}: promised config
  * @type {Map}

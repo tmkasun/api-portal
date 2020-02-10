@@ -16,28 +16,29 @@
 
 import APIClientFactory from './APIClientFactory';
 import Utils from './Utils';
-import Resource from './Resource';
 
 /**
- * An abstract representation of a Scopes
+ * This class contains tenant related api requests
  */
-class Scopes extends Resource {
+class Tenants {
     /**
-     *
-     *
-     * @static
-     * @param {*} scope
-     * @memberof Scopes
+     * @inheritdoc
      */
-    static add(apiId, scope) {
-        const apiClient = new APIClientFactory().getAPIClient(Utils.getCurrentEnvironment()).client;
-        return apiClient.then((client) => {
-            return client.apis['Scope (Collection)'].post_apis__apiId__scopes(
-                { apiId, body: scope },
-                Resource._requestMetaData(),
-            );
+    constructor() {
+        this.client = new APIClientFactory().getAPIClient(Utils.getEnvironment().label).client;
+    }
+
+    /**
+     * Gets tenants by state. If no state is passed it returns tenants who are active
+     * @param {String} state tenant state either active or inactive
+     * @memberof Tenants
+     * @returns {promise} tenants
+     */
+    getTenantsByState = (state = 'active') => {
+        return this.client.then((client) => {
+            return client.apis.tenants.get_tenants({ state });
         });
     }
 }
 
-export default Scopes;
+export default Tenants;

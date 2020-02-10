@@ -14,89 +14,39 @@
  * limitations under the License.
  */
 
-import API from 'AppData/api';
-
 import APIClientFactory from './APIClientFactory';
 import Utils from './Utils';
 import Resource from './Resource';
 
 /**
- * An abstract representation of a Scopes
+ * API client for WSDL related operations
  */
 class Wsdl extends Resource {
     /**
-     * Validate a WSDL file or an archive
+     * Constructor of the WSDL API client
+     * @param {*} client SwaggerClient object
+     */
+    constructor(client = null) {
+        super();
+        if (client == null) {
+            this.apiClient = new APIClientFactory().getAPIClient(Utils.getCurrentEnvironment()).client;
+        } else {
+            this.apiClient = client;
+        }
+    }
+
+    /**
+     * Download the WSDL of an API for the given gateway environment
      *
      * @static
-     * @param {*} file WSDL file or archive
+     * @param {string} apiId API UUID
+     * @param {string} environmentName name of the gateway environment
      * @returns {*} WSDL validation response
      * @memberof Wsdl
      */
-    static validateFileOrArchive(file) {
-        const apiClient = new APIClientFactory().getAPIClient(Utils.getCurrentEnvironment()).client;
-        return apiClient.then((client) => {
-            return client.apis.Validation.validateWSDLDefinition({ file });
-        });
-    }
-
-    /**
-     * Validate a WSDL URL
-     *
-     * @static
-     * @param {*} url WSDL URL
-     * @returns {*} WSDL validation response
-     * @memberof Wsdl
-     */
-    static validateUrl(url) {
-        const apiClient = new APIClientFactory().getAPIClient(Utils.getCurrentEnvironment()).client;
-        return apiClient.then((client) => {
-            return client.apis.Validation.validateWSDLDefinition({ url });
-        });
-    }
-
-    /**
-     * Importing a WSDL and creating an API by a .wsdl file or a WSDL archive zip file
-     *
-     * @static
-     * @param {*} url WSDL url
-     * @param {*} additionalProperties additional properties of the API eg: name, version, context
-     * @param {*} implementationType SOAPTOREST or SOAP
-     * @returns {API} API object which was created
-     * @memberof Wsdl
-     */
-    static importByUrl(url, additionalProperties, implementationType = 'SOAP') {
-        const apiClient = new APIClientFactory().getAPIClient(Utils.getCurrentEnvironment()).client;
-        return apiClient.then((client) => {
-            const promisedResponse = client.apis.APIs.importWSDLDefinition({
-                url,
-                additionalProperties: JSON.stringify(additionalProperties),
-                implementationType,
-            });
-
-            return promisedResponse.then((response) => new API(response.body));
-        });
-    }
-
-    /**
-     * Importing a WSDL and creating an API by a .wsdl file or a WSDL archive zip file
-     *
-     * @static
-     * @param {*} file WSDL file or archive
-     * @param {*} additionalProperties additional properties of the API eg: name, version, context
-     * @param {*} implementationType SOAPTOREST or SOAP
-     * @returns {API} API object which was created
-     * @memberof Wsdl
-     */
-    static importByFileOrArchive(file, additionalProperties, implementationType = 'SOAP') {
-        const apiClient = new APIClientFactory().getAPIClient(Utils.getCurrentEnvironment()).client;
-        return apiClient.then((client) => {
-            const promisedResponse = client.apis.APIs.importWSDLDefinition({
-                file,
-                additionalProperties: JSON.stringify(additionalProperties),
-                implementationType,
-            });
-
-            return promisedResponse.then((response) => new API(response.body));
+    downloadWSDLForEnvironment(apiId, environmentName = null) {
+        return this.apiClient.then((client) => {
+            return client.apis.APIs.getWSDLOfAPI({ apiId, environmentName });
         });
     }
 }

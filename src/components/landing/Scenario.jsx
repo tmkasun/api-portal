@@ -4,7 +4,7 @@ import Card from "@material-ui/core/Card"
 import CardActionArea from "@material-ui/core/CardActionArea"
 import CardActions from "@material-ui/core/CardActions"
 import CardContent from "@material-ui/core/CardContent"
-import Button from "@material-ui/core/Button"
+import { withPrefix } from "gatsby"
 import Typography from "@material-ui/core/Typography"
 import Grid from "@material-ui/core/Grid"
 import Divider from "@material-ui/core/Divider"
@@ -66,7 +66,7 @@ export default function Scenario(props) {
           </CardContent>
         </CardActionArea>
         <CardActions>
-          <Link href={slug}>Discover</Link>
+          <Link href={withPrefix(slug)}>Discover</Link>
         </CardActions>
       </Card>
     </Grid>

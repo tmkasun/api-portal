@@ -2,6 +2,7 @@
  * Configure your Gatsby site with this file.
  *
  * See: https://www.gatsbyjs.org/docs/gatsby-config/
+ * https://www.gatsbyjs.org/packages/gatsby-plugin-material-ui/#advanced
  */
 
 module.exports = {
@@ -10,7 +11,7 @@ module.exports = {
     siteUrl: `https://www.gatsbyjs.org`,
     description: `API Portal sample description`,
   },
-  // pathPrefix: `/apiportal/site/public`,
+  pathPrefix: `/devportal/landing`,
   plugins: [
     {
       resolve: "gatsby-source-filesystem",
