@@ -16,7 +16,7 @@ In developer portal, You can explore the APIs and subscribe to them and use. It 
 
 This project has built using GatsbyJS library, Hence all the features/tools/plugins available with GatsbyJS are available in here as well
 
-#### Re: GatsbyJS
+#### About: GatsbyJS
 
 > Gatsby is a free and open source framework based on React that helps developers build blazing fast websites and apps
 
